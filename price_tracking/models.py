@@ -1,20 +1,6 @@
 from django.db import models
 
 # Create your models here.
-class Product(models.Model):
-    class Meta:
-        db_table = "product"
-        verbose_name_plural = "Products"
-
-    name = models.CharField(max_length=100, blank=False)
-    code = models.CharField(max_length=10, blank=False)
-    description = models.TextField(blank=True)
-    # unit_price = models.FloatField()
-    # created = models.DateTimeField(auto_now_add=True)
-    # updated = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return str(self.name)
 
 class Client(models.Model):
     class Meta:
@@ -37,6 +23,21 @@ class Supplier(models.Model):
 
     def __str__(self):
         return "{} ({})".format(str(self.name), self.code)
+class Product(models.Model):
+    class Meta:
+        db_table = "product"
+        verbose_name_plural = "Products"
+
+    name = models.CharField(max_length=100, blank=False)
+    code = models.CharField(max_length=10, blank=False)
+    description = models.TextField(blank=True)
+    product_supply = models.ManyToManyField(Supplier, through='ProductSupply')
+    # unit_price = models.FloatField()
+    # created = models.DateTimeField(auto_now_add=True)
+    # updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.name)
 
 class Order(models.Model):
     class Meta:
@@ -66,17 +67,16 @@ class OrderItem(models.Model):
     def __str__(self):
         return "{}-{}".format(self.order.__str__(), self.product.__str__())
 
+class ProductSupply(models.Model):
+    class Meta:
+        db_table = "product_supply"
+        verbose_name_plural = "Product Supply"
+        unique_together = ('product', 'supplier',)
 
-# class Transaction(models.Model):
-#     class Meta:
-#         db_table = "transaction"
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
+    inventory = models.IntegerField(blank=False)
+    unit_price = models.FloatField(blank=False)
 
-#     order_date = models.DateTimeField(blank=False)
-#     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-#     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
-#     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-#     created = models.DateTimeField(auto_now_add=True)
-#     updated = models.DateTimeField(auto_now=True)
-
-#     def __str__(self):
-#         return "{}-{}-{}".format(self.id, self.client.name, self.supplier.name)
+    def __str__(self):
+        return "{}-{}".format(self.supplier.__str__(), self.product.__str__())

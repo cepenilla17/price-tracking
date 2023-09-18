@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.db.models import (
-    F, Func, Value, CharField, Max, Min, Sum
+    F, Func, Value, CharField, Max, Min, Sum, Count
 )
 from ..models import OrderItem
 
@@ -20,7 +20,8 @@ def get_transaction_history(request, product_id):
     end_date = query_params.get('endDate')
 
     filters = {
-        "product": product_id
+        "product": product_id,
+        "order__supplier__productsupply__product": product_id,
     }
 
     # Filters
@@ -58,28 +59,25 @@ def get_transaction_history(request, product_id):
         min_price = Min('unit_price'),
         total_quantity = Sum('quantity'),
         total_amount = Sum(F('quantity') * F('unit_price')),
-        average_price = (F('min_price') + F('max_price')) / 2,
+        # average_price = (F('min_price') + F('max_price')) / 2,
+        average_price = Sum(F('unit_price')) / Count(F('unit_price')),
         overall_average_price = F('total_amount') / F('total_quantity'),
-    )
-
-    suppliers = order_items_qset.distinct('order__supplier__id').values(
-        supplier_id=F('order__supplier__id'),
-        name=F('order__supplier__name'),
-        code=F('order__supplier__code'),
     )
 
     supplier_stats = order_items_qset.values(
         supplier_id=F('order__supplier__id'),
         name=F('order__supplier__name'),
         code=F('order__supplier__code'),
+        current_price=F('order__supplier__productsupply__unit_price'),
     ).annotate(
         max_price = Max('unit_price'),
         min_price = Min('unit_price'),
         total_quantity = Sum('quantity'),
         total_amount = Sum(F('quantity') * F('unit_price')),
-        average_price = (F('min_price') + F('max_price')) / 2,
+        # average_price = (F('min_price') + F('max_price')) / 2,
+        average_price = Sum(F('unit_price')) / Count(F('unit_price')),
         overall_average_price = F('total_amount') / F('total_quantity'),
-    )
+    ).order_by("overall_average_price")
 
     return JsonResponse({
         "stats": stats,
